@@ -36,4 +36,5 @@ await build({
     },
   },
 })
+await fs.rm('src', { recursive: true })
 execSync(`yarn remove ${moduleName}`)
