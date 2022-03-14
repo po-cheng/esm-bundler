@@ -3,6 +3,7 @@
     "commander": "^9.0.0",
     "mkdirp": "^1.0.4",
     "theredoc": "^1.0.0",
+    "uglify-es": "^3.3.9",
     "vite": "^2.8.6"
   }
 }

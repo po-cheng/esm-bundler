@@ -19,7 +19,7 @@ if (!moduleName) {
 execSync(`yarn add ${moduleName}`)
 const entry = asDefault
   ? theredoc`
-      import mode from '${moduleName}'
+      import mod from '${moduleName}'
       export default mod
     `
   : theredoc`
@@ -27,14 +27,18 @@ const entry = asDefault
     `
 await mkdirp('src')
 await fs.writeFile('src/app.ts', entry, 'utf8')
+const outputfileName = moduleName.replace('/', '-')
 await build({
   build: {
     lib: {
       entry: 'src/app.ts',
       name: 'vendor',
-      fileName: (format) => `${moduleName.replace('/', '-')}.${format}.js`,
+      fileName: (format) => `${outputfileName}.${format}.js`,
     },
   },
 })
 await fs.rm('src', { recursive: true })
 execSync(`yarn remove ${moduleName}`)
+execSync(
+  `yarn uglifyjs dist/${outputfileName}.es.js --compress --mangle -o dist/${outputfileName}.es.min.js`
+)
