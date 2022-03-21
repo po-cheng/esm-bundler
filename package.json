@@ -1,4 +1,7 @@
 {
+  "name": "esm-bundler",
+  "author": "James Chen",
+  "license": "MIT",
   "dependencies": {
     "commander": "^9.0.0",
     "mkdirp": "^1.0.4",
