@@ -5,7 +5,8 @@
 ```zsh
 node bundle.mjs -m <module name>
 
-# add -d flag to re-export module as default export
+# add -d to re-export module as default export
+# add -p to pack peer dependencies into the bundle
 # -h for help
 ```
 

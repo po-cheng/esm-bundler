@@ -8,9 +8,11 @@ import { program } from 'commander'
 program
   .option('-m, --moduleName <name>', 'module to bundle')
   .option('-d, --asDefault', 're-export module using default export')
+  .option('-p, --peers', 'pack peer dependencies into same bundle')
 
 program.parse()
-const { moduleName, asDefault } = program.opts()
+const { moduleName, asDefault, peers } = program.opts()
+console.log({ moduleName, asDefault, peers })
 
 if (!moduleName) {
   program.help()
@@ -52,9 +54,13 @@ await build({
       name: 'vendor',
       fileName: (format) => `${outputfileName}.${format}.js`,
     },
-    rollupOptions: {
-      external: peerDeps,
-    },
+    ...(!peers
+      ? {
+          rollupOptions: {
+            external: peerDeps,
+          },
+        }
+      : {}),
   },
 })
 await fs.rm('src', { recursive: true })
