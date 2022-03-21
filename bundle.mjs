@@ -16,7 +16,24 @@ if (!moduleName) {
   program.help()
 }
 
+const infoCmd = `yarn info ${moduleName} peerDependencies`
+const pkgInfo = execSync(infoCmd, { encoding: 'utf8' })
+const regex = /\{[\n\r\d\s\w\W]*\}/
+const peerDepsConfig = regex
+  .exec(pkgInfo)[0]
+  .replace(/'/g, `"`)
+  .replace(/\{\r?\n/g, ``)
+  .replace(/\r?\n}/g, ``)
+const peerDeps = peerDepsConfig
+  .split(/\r?\n/)
+  .map((s) => /\s+([\w\W]+):/.exec(s)[1])
+
+// install main module
 execSync(`yarn add ${moduleName}`)
+
+// install all peer deps as dev deps
+execSync(`yarn add -D ${peerDeps.join(' ')}`)
+
 const entry = asDefault
   ? theredoc`
       import mod from '${moduleName}'
@@ -35,10 +52,13 @@ await build({
       name: 'vendor',
       fileName: (format) => `${outputfileName}.${format}.js`,
     },
+    rollupOptions: {
+      external: peerDeps,
+    },
   },
 })
 await fs.rm('src', { recursive: true })
-execSync(`yarn remove ${moduleName}`)
+execSync(`yarn remove ${moduleName} ${peerDeps.join(' ')}`)
 execSync(
   `yarn uglifyjs dist/${outputfileName}.es.js --compress --mangle -o dist/${outputfileName}.es.min.js`
 )
