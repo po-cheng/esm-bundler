@@ -46,7 +46,7 @@ const entry = asDefault
     `
 await mkdirp('src')
 await fs.writeFile('src/app.ts', entry, 'utf8')
-const outputfileName = moduleName.replace('/', '-')
+const outputfileName = moduleName.replace('/', '-').replace('@', '')
 await build({
   build: {
     lib: {

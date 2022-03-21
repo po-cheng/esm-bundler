@@ -16,7 +16,9 @@ node bundle.mjs -m <module name>
 - there will be three files: `<module>.es.js`, `<module>.umd.js` and `<module>.es.min.js`
   - the `es.js` and `es.min.js` file can be imported as an `esm`
   - the `umd.js` file needs to be included using a `<script />` tag
-  - slash (`/`) characters in module names will be replaced with dashes (`-`)
+  - output file naming rules:
+    - slash (`/`) characters in module names will be replaced with dashes (`-`)
+    - asperand (`@`) characters in modules names will be removed
 
 ## caveats
 
