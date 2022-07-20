@@ -1,9 +1,12 @@
-import fs from "fs/promises"
-import theredoc from "theredoc"
-import mkdirp from "mkdirp"
-import { execSync } from "child_process"
-import { build } from "vite"
-import { program } from "commander"
+import fs from "fs/promises";
+import theredoc from "theredoc";
+import mkdirp from "mkdirp";
+import { exec } from "child_process";
+import { promisify } from "util";
+import { build } from "vite";
+import { program } from "commander";
+
+const execAsync = promisify(exec);
 
 program
   .option("-m, --moduleName <name>", "module to bundle")
@@ -12,14 +15,14 @@ program
   .option(
     "-D, --manualDeps <deps>",
     "manually specify dependencies, separated by commas"
-  )
+  );
 
-program.parse()
-const { moduleName, asDefault, peers, manualDeps } = program.opts()
-console.log({ moduleName, asDefault, peers, manualDeps })
+program.parse();
+const { moduleName, asDefault, peers, manualDeps } = program.opts();
+console.log({ moduleName, asDefault, peers, manualDeps });
 
 if (!moduleName) {
-  program.help()
+  program.help();
 }
 
 const config = {
@@ -33,39 +36,39 @@ const config = {
   rollupOptions: {
     external: [],
   },
-}
+};
 
 // install main module
-execSync(`yarn add ${moduleName}`)
+await execAsync(`yarn add ${moduleName}`);
 
 // process peer dependencies
-const infoCmd = `yarn info ${moduleName} peerDependencies`
-const pkgInfo = execSync(infoCmd, { encoding: "utf8" })
-const regex = /\{[\n\r\d\s\w\W]*\}/
-let peerDeps = []
+const infoCmd = `yarn info ${moduleName} peerDependencies`;
+const pkgInfo = await execAsync(infoCmd, { encoding: "utf8" });
+const regex = /\{[\n\r\d\s\w\W]*\}/;
+let peerDeps = [];
 if (regex.test(pkgInfo)) {
   const peerDepsConfig = regex
     .exec(pkgInfo)[0]
     .replace(/'/g, `"`)
     .replace(/\{\r?\n/g, ``)
-    .replace(/\r?\n}/g, ``)
+    .replace(/\r?\n}/g, ``);
   peerDeps = peerDepsConfig
     .split(/\r?\n/)
-    .map((s) => /\s+([\w\W]+):/.exec(s)[1])
+    .map((s) => /\s+([\w\W]+):/.exec(s)[1]);
 
   // install all peer deps as dev deps
-  execSync(`yarn add -D ${peerDeps.join(" ")}`)
-  config.rollupOptions.external = [config.rollupOptions.external, ...peerDeps]
+  await execAsync(`yarn add -D ${peerDeps.join(" ")}`);
+  config.rollupOptions.external = [config.rollupOptions.external, ...peerDeps];
 }
 
+// process manual dependencies
 if (manualDeps) {
-  const deps = manualDeps.split(",")
-  execSync(`yarn add -D ${deps.join(" ")}`)
-  config.rollupOptions.external = [config.rollupOptions.external, ...deps]
+  const deps = manualDeps.split(",");
+  await execAsync(`yarn add -D ${deps.join(" ")}`);
+  config.rollupOptions.external = [config.rollupOptions.external, ...deps];
 }
 
 // create entry file
-
 const entry = asDefault
   ? theredoc`
       import mod from '${moduleName}'
@@ -73,20 +76,22 @@ const entry = asDefault
     `
   : theredoc`
       export * from '${moduleName}'
-    `
-await mkdirp("src")
-await fs.writeFile("src/app.ts", entry, "utf8")
-const outputfileName = moduleName.replace("/", "-").replace("@", "")
+    `;
+await mkdirp("src");
+await fs.writeFile("src/app.ts", entry, "utf8");
+const outputfileName = moduleName.replace("/", "-").replace("@", "");
 
 // build bundle
+await build(config);
 
-await build(config)
-await fs.rm("src", { recursive: true })
-execSync(
-  `yarn remove ${moduleName} ${peerDeps.join(" ")} ${
-    manualDeps?.split(",").join(" ") ?? ""
-  }`
-)
-execSync(
-  `yarn uglifyjs dist/${outputfileName}.es.js --compress --mangle --module -o dist/${outputfileName}.es.min.js`
-)
+// uglify esm
+const ugInput = `dist/${outputfileName}.es.js`;
+const ugOutput = `dist/${outputfileName}.es.min.js`;
+const ugCmd = `yarn uglifyjs ${ugInput} --compress --mangle --module -o ${ugOutput}`;
+await execAsync(ugCmd);
+
+// clean up files
+const manualDepKeys = manualDeps?.split(",").join(" ") ?? "";
+const peerDepKeys = peerDeps.join(" ");
+await fs.rm("src", { recursive: true });
+await execAsync(`yarn remove ${moduleName} ${peerDepKeys} ${manualDepKeys}`);
